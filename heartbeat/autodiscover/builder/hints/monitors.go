@@ -61,6 +61,7 @@ func NewHeartbeatHints(cfg *common.Config) (autodiscover.Builder, error) {
 
 // Create config based on input hints in the bus event
 func (hb *heartbeatHints) CreateConfig(event bus.Event, options ...ucfg.Option) []*common.Config {
+	logp.Debug("monitors", "create config based on %v with options %v", event, options)
 	var hints common.MapStr
 	hIface, ok := event["hints"]
 	if ok {

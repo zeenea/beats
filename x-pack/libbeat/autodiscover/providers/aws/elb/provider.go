@@ -150,6 +150,13 @@ func (p *Provider) onWatcherStart(arn string, lbl *lbListener) {
 		},
 	}
 
+
+	for _, tag := range lbl.tags {
+		tags := common.MapStr{}
+		tags[awsauto.SafeString(tag.Key)] = awsauto.SafeString(tag.Value)
+		e["tags"] = tags
+	}
+
 	if configs := p.templates.GetConfig(e); configs != nil {
 		e["config"] = configs
 	}

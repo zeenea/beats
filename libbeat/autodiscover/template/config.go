@@ -126,6 +126,8 @@ func ApplyConfigTemplate(event bus.Event, configs []*common.Config, options ...u
 	if err != nil {
 		logp.Err("Error building config: %v", err)
 	}
+	logp.Debug("config", "vars %v", vars.GetFields())
+	logp.Debug("config", "vars %v", vars.FlattenedKeys())
 
 	opts := []ucfg.Option{
 		// Catch-all resolve function to log fields not resolved in any other way,
@@ -153,7 +155,8 @@ func ApplyConfigTemplate(event bus.Event, configs []*common.Config, options ...u
 		var unpacked map[string]interface{}
 		err = c.Unpack(&unpacked, opts...)
 		if err != nil {
-			logp.Debug("autodiscover", "Configuration template cannot be resolved: %v", err)
+			logp.Debug("config", "Configuration template cannot be resolved: %v", err)
+			logp.Debug("config", "unpacked: %v", unpacked)
 			continue
 		}
 		// Repack again:
@@ -164,5 +167,6 @@ func ApplyConfigTemplate(event bus.Event, configs []*common.Config, options ...u
 		}
 		result = append(result, res)
 	}
+	logp.Debug("config", "result: %v", result)
 	return result
 }

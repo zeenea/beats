@@ -66,5 +66,10 @@
           type: number
           example: 8080
           description: Port number for this listener
+        - name: tags.*
+          type: object
+          object_type: keyword
+          object_type_mapping_type: "*"
+          description: Tag key value pairs from aws resources.
 
 

@@ -79,11 +79,17 @@ func (w *watcher) once() error {
 
 	// Increment the generation of all ELBs returned by the API request
 	for _, lbl := range fetchedLbls {
+		logp.Debug("watch", "new elb %v", lbl.arn())
+		logp.Debug("watch", "%v watcher registred", len(w.lbListeners))
 		arn := lbl.arn()
 		if _, exists := w.lbListeners[arn]; !exists {
+			logp.Debug("watch", "start elb %v", lbl.arn())
 			if w.onStart != nil {
+
 				w.onStart(arn, lbl)
 			}
+		}else{
+			logp.Debug("watch", "elb %v exists", lbl.arn())
 		}
 		w.lbListeners[arn] = w.gen
 	}
@@ -92,6 +98,7 @@ func (w *watcher) once() error {
 	for uuid, entryGen := range w.lbListeners {
 		if entryGen == oldGen {
 			if w.onStop != nil {
+				logp.Debug("watch", "stop elb %v", uuid)
 				w.onStop(uuid)
 				delete(w.lbListeners, uuid)
 			}

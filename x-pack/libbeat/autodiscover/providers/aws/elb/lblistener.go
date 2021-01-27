@@ -15,6 +15,7 @@ import (
 type lbListener struct {
 	lb       *elasticloadbalancingv2.LoadBalancer
 	listener *elasticloadbalancingv2.Listener
+	tags     []elasticloadbalancingv2.Tag
 }
 
 // toMap converts this lbListener into the form consumed as metadata in the autodiscovery process.
@@ -34,6 +35,9 @@ func (l *lbListener) toMap() common.MapStr {
 		"security_groups":    l.lb.SecurityGroups,
 		"vpc_id":             awsauto.SafeString(l.lb.VpcId),
 		"ssl_policy":         l.listener.SslPolicy,
+	}
+	for _, tag := range l.tags{
+		m.Put("tags."+awsauto.SafeString(tag.Key), awsauto.SafeString(tag.Value))
 	}
 
 	if l.listener.Port != nil {

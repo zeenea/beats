@@ -130,6 +130,9 @@ func (p *fetchRequest) fetch() ([]*lbListener, error) {
 		return nil, multierr.Combine(p.errs...)
 	}
 
+	for _, llb := range p.lbListeners {
+		logp.Debug("fetch", "listener: %v", llb.arn())
+	}
 	return p.lbListeners, nil
 }
 
@@ -155,7 +158,11 @@ func (p *fetchRequest) fetchNextPage() (more bool) {
 
 	if success {
 		for _, lb := range p.paginator.CurrentPage().LoadBalancers {
-			p.dispatch(func() { p.fetchListeners(lb) })
+			logp.Debug("fetch", "fetch next listeners for %v", *lb.LoadBalancerArn)
+			lb := lb
+			p.dispatch(func() {
+				p.fetchListeners(lb)
+			})
 		}
 	}
 
@@ -182,8 +189,10 @@ func (p *fetchRequest) dispatch(fn func()) {
 }
 
 func (p *fetchRequest) fetchListeners(lb elasticloadbalancingv2.LoadBalancer) {
+	logp.Debug("fetch", "fetch listener: %v", *lb.LoadBalancerArn)
 	listenReq := p.client.DescribeListenersRequest(&elasticloadbalancingv2.DescribeListenersInput{LoadBalancerArn: lb.LoadBalancerArn})
 	listen := elasticloadbalancingv2.NewDescribeListenersPaginator(listenReq)
+	tags := p.fetchTags(lb)
 
 	if listen.Err() != nil {
 		p.recordErrResult(listen.Err())
@@ -199,18 +208,34 @@ func (p *fetchRequest) fetchListeners(lb elasticloadbalancingv2.LoadBalancer) {
 			}
 
 			for _, listener := range listen.CurrentPage().Listeners {
-				p.recordGoodResult(&lb, &listener)
+				listener := listener
+				p.recordGoodResult(&lb, &listener, tags)
 			}
 		}
 
 	}
 }
 
-func (p *fetchRequest) recordGoodResult(lb *elasticloadbalancingv2.LoadBalancer, lbl *elasticloadbalancingv2.Listener) {
+func (p *fetchRequest) fetchTags(lb elasticloadbalancingv2.LoadBalancer) []elasticloadbalancingv2.Tag {
+	tagReq := p.client.DescribeTagsRequest(&elasticloadbalancingv2.DescribeTagsInput{ResourceArns: []string{*lb.LoadBalancerArn}})
+	tags, err := tagReq.Send(p.context)
+
+	if err != nil {
+		p.recordErrResult(err)
+	}
+	if tags != nil && tags.TagDescriptions != nil && len(tags.TagDescriptions) > 0 {
+		return tags.TagDescriptions[0].Tags
+	} else {
+		return []elasticloadbalancingv2.Tag{}
+	}
+
+}
+
+func (p *fetchRequest) recordGoodResult(lb *elasticloadbalancingv2.LoadBalancer, lbl *elasticloadbalancingv2.Listener, tags []elasticloadbalancingv2.Tag) {
 	p.resultsLock.Lock()
 	defer p.resultsLock.Unlock()
 
-	p.lbListeners = append(p.lbListeners, &lbListener{lb, lbl})
+	p.lbListeners = append(p.lbListeners, &lbListener{lb, lbl, tags})
 }
 
 func (p *fetchRequest) recordErrResult(err error) {
