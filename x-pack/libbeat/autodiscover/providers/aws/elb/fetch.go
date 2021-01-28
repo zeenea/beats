@@ -155,6 +155,7 @@ func (p *fetchRequest) fetchNextPage() (more bool) {
 
 	if success {
 		for _, lb := range p.paginator.CurrentPage().LoadBalancers {
+			lb := lb
 			p.dispatch(func() { p.fetchListeners(lb) })
 		}
 	}
@@ -199,6 +200,7 @@ func (p *fetchRequest) fetchListeners(lb elasticloadbalancingv2.LoadBalancer) {
 			}
 
 			for _, listener := range listen.CurrentPage().Listeners {
+				listener := listener
 				p.recordGoodResult(&lb, &listener)
 			}
 		}
